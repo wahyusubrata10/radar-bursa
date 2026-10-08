@@ -13,11 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Siapkan source (ekstrak zip jika diunggah dari HP)
+      - name: Siapkan source (cari zip di folder mana pun)
         id: src
         run: |
-          if [ ! -f settings.gradle ] && [ -f YooHaw-source.zip ]; then
-            unzip -o -q YooHaw-source.zip -d .
+          Z=$(find . -name 'YooHaw-source.zip' -not -path './.git/*' | head -1)
+          if [ ! -f settings.gradle ] && [ -n "$Z" ]; then
+            echo "Zip ditemukan: $Z"
+            unzip -o -q "$Z" -d .
           fi
           if [ -f settings.gradle ]; then echo "ready=1" >> "$GITHUB_OUTPUT"; else echo "Source belum diunggah, build dilewati."; fi
 
