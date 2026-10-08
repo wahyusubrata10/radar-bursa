@@ -1,0 +1,51 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Siapkan source (ekstrak zip jika diunggah dari HP)
+        id: src
+        run: |
+          if [ ! -f settings.gradle ] && [ -f YooHaw-source.zip ]; then
+            unzip -o -q YooHaw-source.zip -d .
+          fi
+          if [ -f settings.gradle ]; then echo "ready=1" >> "$GITHUB_OUTPUT"; else echo "Source belum diunggah, build dilewati."; fi
+
+      - uses: actions/setup-java@v4
+        if: steps.src.outputs.ready == '1'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.src.outputs.ready == '1'
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        if: steps.src.outputs.ready == '1'
+        run: gradle :app:assembleRelease --no-daemon --stacktrace && cp app/build/outputs/apk/release/app-release.apk YooHaw.apk
+
+      - uses: actions/upload-artifact@v4
+        if: steps.src.outputs.ready == '1'
+        with:
+          name: YooHaw.apk
+          path: YooHaw.apk
+
+      - name: Terbitkan di halaman Releases
+        if: steps.src.outputs.ready == '1'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Yoo Haw build ${{ github.run_number }}
+          files: YooHaw.apk
